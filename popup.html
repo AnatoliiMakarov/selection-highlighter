@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --font: "Segoe UI", "SF Pro Text", system-ui, sans-serif;
+    --mono: "SF Mono", "Cascadia Mono", "Consolas", monospace;
+    --bg: #faf9f7;
+    --surface: #fff;
+    --border: #e2dfda;
+    --border-dark: #2a2a2a;
+    --text: #2a2a2a;
+    --text-dim: #918a7e;
+    --accent: #22c55e;
+  }
+
+  body {
+    width: 264px;
+    font-family: var(--font);
+    font-size: 12px;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1.5px solid var(--border-dark);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .logo img { width: 15px; height: 15px; }
+
+  .logo span {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: -0.2px;
+  }
+
+  /* ── On/Off ── */
+  .power-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 3px 8px;
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.12s;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.3px;
+    color: var(--text-dim);
+  }
+
+  .power-btn:hover { border-color: var(--border-dark); }
+
+  .power-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ccc;
+    transition: all 0.15s;
+  }
+
+  .power-btn.on { color: var(--text); border-color: var(--accent); }
+  .power-btn.on .power-dot {
+    background: var(--accent);
+    box-shadow: 0 0 5px rgba(34,197,94,0.4);
+  }
+
+  /* ── Rows ── */
+  .rows { padding: 2px 0; }
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .row:last-child { border-bottom: none; }
+
+  .row-label {
+    font-size: 11.5px;
+    font-weight: 500;
+  }
+
+  .row-hint {
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-top: 1px;
+  }
+
+  /* ── Number stepper ── */
+  .stepper {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .stepper button {
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: var(--surface);
+    color: var(--text-dim);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .stepper button:hover {
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .stepper input {
+    width: 32px;
+    height: 24px;
+    border: none;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text);
+    outline: none;
+    -moz-appearance: textfield;
+  }
+
+  .stepper input::-webkit-inner-spin-button,
+  .stepper input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+
+  /* ── Color row ── */
+  .color-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .color-hex {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--text-dim);
+  }
+
+  input[type="color"] {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: none;
+    cursor: pointer;
+    padding: 1px;
+  }
+
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
+
+  .sync-btn {
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--surface);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s;
+    padding: 0;
+  }
+
+  .sync-btn:hover { border-color: var(--border-dark); }
+
+  .sync-btn svg {
+    width: 12px;
+    height: 12px;
+    stroke: var(--text-dim);
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .sync-btn:hover svg { stroke: var(--text); }
+
+  /* ── Checkbox ── */
+  .check {
+    position: relative;
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .check input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    cursor: pointer;
+    margin: 0;
+  }
+
+  .check-box {
+    width: 15px;
+    height: 15px;
+    border: 1.5px solid #bbb;
+    border-radius: 2px;
+    background: var(--surface);
+    transition: all 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .check-box::after {
+    content: "";
+    width: 7px;
+    height: 7px;
+    background: var(--text);
+    border-radius: 1px;
+    transform: scale(0);
+    transition: transform 0.1s;
+  }
+
+  .check input:checked ~ .check-box { border-color: var(--text); }
+  .check input:checked ~ .check-box::after { transform: scale(1); }
+
+  /* ── Footer ── */
+  footer {
+    padding: 8px 14px 10px;
+    border-top: 1.5px solid var(--border-dark);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .shortcuts {
+    display: flex;
+    gap: 10px;
+  }
+
+  .shortcut {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 9px;
+    color: var(--text-dim);
+  }
+
+  kbd {
+    display: inline-block;
+    padding: 0px 3px;
+    font-family: var(--mono);
+    font-size: 8.5px;
+    color: #666;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 2px;
+    line-height: 1.5;
+  }
+
+  .reset-btn {
+    font-family: var(--mono);
+    font-size: 8.5px;
+    color: var(--text-dim);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: var(--border);
+    transition: all 0.1s;
+    padding: 0;
+  }
+
+  .reset-btn:hover {
+    color: var(--text);
+    text-decoration-color: var(--text);
+  }
+
+  /* ── Toast ── */
+  .saved {
+    position: fixed;
+    bottom: 36px;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.3px;
+    color: var(--text);
+    background: #d4edda;
+    border: 1px solid #a3cfbb;
+    padding: 2px 10px;
+    border-radius: 2px;
+    opacity: 0;
+    transition: all 0.2s;
+    pointer-events: none;
+  }
+
+  .saved.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <img src="icon48.png" alt="">
+      <span>Selection Highlighter</span>
+    </div>
+    <button class="power-btn on" id="powerBtn">
+      <span class="power-label">ON</span>
+      <div class="power-dot"></div>
+    </button>
+  </header>
+
+  <div class="rows">
+    <div class="row">
+      <span class="row-label">Min length</span>
+      <div class="stepper">
+        <button id="minDec">−</button>
+        <input type="number" id="minLength" min="1" max="100" value="2">
+        <button id="minInc">+</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="row-label">Highlight</span>
+      <div class="color-row">
+        <span class="color-hex" id="colorHex">#ffeb3b</span>
+        <input type="color" id="color" value="#ffeb3b">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <span class="row-label">Marker border</span>
+        <div class="row-hint">Scrollbar tick borders</div>
+      </div>
+      <div class="color-row">
+        <button class="sync-btn" id="syncBorder" title="Copy highlight color">
+          <svg viewBox="0 0 16 16"><path d="M10 2H4v8"/><rect x="6" y="6" width="6" height="8" rx="0.5"/></svg>
+        </button>
+        <span class="color-hex" id="borderHex">#000000</span>
+        <input type="color" id="borderColor" value="#000000">
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="row-label">Case sensitive</span>
+      <label class="check">
+        <input type="checkbox" id="caseSensitive">
+        <div class="check-box"></div>
+      </label>
+    </div>
+
+    <div class="row">
+      <div>
+        <span class="row-label">Whole word</span>
+        <div class="row-hint">Skip partial matches</div>
+      </div>
+      <label class="check">
+        <input type="checkbox" id="wholeWord">
+        <div class="check-box"></div>
+      </label>
+    </div>
+  </div>
+
+  <footer>
+    <div class="shortcuts">
+      <div class="shortcut"><kbd>Ctrl</kbd><kbd>↓</kbd> next</div>
+      <div class="shortcut"><kbd>Ctrl</kbd><kbd>↑</kbd> prev</div>
+    </div>
+    <button class="reset-btn" id="resetBtn">reset</button>
+  </footer>
+
+  <div class="saved" id="saved">Saved</div>
+  <input type="checkbox" id="enabled" style="display:none" checked>
+
+  <script src="popup.js"></script>
+</body>
+</html>

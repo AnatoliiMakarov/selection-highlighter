@@ -1,0 +1,28 @@
+/* All matches */
+::highlight(selection-matches) {
+  background-color: var(--sh-color, #ffeb3b);
+  color: inherit;
+}
+
+/* Active match (Ctrl+ArrowUp/Down navigation) */
+::highlight(selection-current) {
+  background-color: var(--sh-color, #ffeb3b);
+  color: inherit;
+  text-decoration: underline 1px var(--sh-border, rgba(0,0,0,0.5));
+  text-underline-offset: 2px;
+  text-shadow: 0 0 1px var(--sh-border, rgba(0,0,0,0.4));
+}
+
+/* Fallback — regular match */
+.sh-highlight-match {
+  background-color: var(--sh-color, #ffeb3b) !important;
+  color: inherit !important;
+  border-radius: 2px;
+}
+
+/* Fallback — active match */
+.sh-highlight-current {
+  background-color: var(--sh-color, #ffeb3b) !important;
+  outline: 1.5px solid var(--sh-border, rgba(0,0,0,0.5)) !important;
+  outline-offset: 1px;
+}
