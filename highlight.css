@@ -34,6 +34,15 @@
   transition: box-shadow 0.15s ease;
 }
 
+/* Active input match (Ctrl+Arrow navigation) */
+.sh-input-active {
+  box-shadow: 0 0 0 2px var(--sh-color, #ffeb3b),
+              0 0 0 4px var(--sh-border, rgba(0,0,0,0.5)) !important;
+  outline: 2px solid var(--sh-color, #ffeb3b) !important;
+  outline-offset: 2px;
+  transition: box-shadow 0.15s ease, outline 0.15s ease;
+}
+
 /* Input match banner */
 .sh-input-banner {
   position: fixed;

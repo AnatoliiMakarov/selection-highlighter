@@ -13,6 +13,8 @@
   let inputMatchCount = 0;
   let inputBanner = null;
   let highlightedInputs = [];
+  let matchingInputEls = [];
+  let navItems = [];
   let settings = {
     minLength: 2,
     color: "#ffeb3b",
@@ -121,6 +123,7 @@
     // Input field matches
     const inputResult = countInputMatches(query);
     inputMatchCount = inputResult.count;
+    matchingInputEls = inputResult.elements;
     if (settings.highlightInputs && inputResult.elements.length > 0) {
       for (const el of inputResult.elements) {
         el.classList.add("sh-input-match");
@@ -133,6 +136,27 @@
       removeInputBanner();
     }
 
+    // Build unified navigation list
+    navItems = [];
+    if (supportsHighlightAPI) {
+      for (const r of currentRanges) {
+        try {
+          const rect = r.getBoundingClientRect();
+          navItems.push({ type: "range", target: r, y: rect.top + window.scrollY });
+        } catch (e) { /* detached range */ }
+      }
+    } else {
+      for (const m of fallbackMarks) {
+        const rect = m.getBoundingClientRect();
+        navItems.push({ type: "mark", target: m, y: rect.top + window.scrollY });
+      }
+    }
+    for (const el of matchingInputEls) {
+      const rect = el.getBoundingClientRect();
+      navItems.push({ type: "input", target: el, y: rect.top + window.scrollY });
+    }
+    navItems.sort((a, b) => a.y - b.y);
+
     currentIndex = -1;
     updateBadge(matchCount + inputMatchCount);
     if (matchCount > 0) {
@@ -144,6 +168,7 @@
   function clearInputHighlights() {
     for (const el of highlightedInputs) {
       el.classList.remove("sh-input-match");
+      el.classList.remove("sh-input-active");
     }
     highlightedInputs = [];
     inputMatchCount = 0;
@@ -211,46 +236,36 @@
 
   // ── Navigation: Ctrl+↑ / Ctrl+↓ ──
   function findClosestMatchIndex() {
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return 0;
-
-    const selRect = sel.getRangeAt(0).getBoundingClientRect();
-    const selY = selRect.top + window.scrollY;
-
-    let closestIdx = 0;
-    let closestDist = Infinity;
-
-    if (supportsHighlightAPI) {
-      for (let i = 0; i < currentRanges.length; i++) {
-        try {
-          const rect = currentRanges[i].getBoundingClientRect();
-          const dist = Math.abs(rect.top + window.scrollY - selY);
-          if (dist < closestDist) {
-            closestDist = dist;
-            closestIdx = i;
-          }
-        } catch (e) { /* skip */ }
-      }
+    if (navItems.length === 0) return 0;
+    let selY = 0;
+    const active = document.activeElement;
+    if (active && matchingInputEls.includes(active)) {
+      const rect = active.getBoundingClientRect();
+      selY = rect.top + window.scrollY;
     } else {
-      for (let i = 0; i < fallbackMarks.length; i++) {
-        const rect = fallbackMarks[i].getBoundingClientRect();
-        const dist = Math.abs(rect.top + window.scrollY - selY);
-        if (dist < closestDist) {
-          closestDist = dist;
-          closestIdx = i;
-        }
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const selRect = sel.getRangeAt(0).getBoundingClientRect();
+        selY = selRect.top + window.scrollY;
       }
     }
-
+    let closestIdx = 0;
+    let closestDist = Infinity;
+    for (let i = 0; i < navItems.length; i++) {
+      const dist = Math.abs(navItems[i].y - selY);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestIdx = i;
+      }
+    }
     return closestIdx;
   }
 
   function navigateToMatch(direction) {
-    const total = supportsHighlightAPI ? currentRanges.length : fallbackMarks.length;
+    const total = navItems.length;
     if (total === 0) return;
 
     if (currentIndex === -1) {
-      // First time — find closest and step forward/back
       const closest = findClosestMatchIndex();
       if (direction === "next") {
         currentIndex = closest < total - 1 ? closest + 1 : 0;
@@ -263,22 +278,27 @@
       currentIndex = currentIndex > 0 ? currentIndex - 1 : total - 1;
     }
 
+    // Clear all active states
     if (supportsHighlightAPI) {
-      // Separate highlight for active match
       CSS.highlights.delete("selection-current");
-      const activeRange = currentRanges[currentIndex];
-      if (activeRange) {
-        CSS.highlights.set("selection-current", new Highlight(activeRange));
-        scrollToRange(activeRange);
-      }
     } else {
-      // Fallback: toggle class
       fallbackMarks.forEach((m) => m.classList.remove("sh-highlight-current"));
-      const activeMark = fallbackMarks[currentIndex];
-      if (activeMark) {
-        activeMark.classList.add("sh-highlight-current");
-        activeMark.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+    }
+    for (const el of matchingInputEls) {
+      el.classList.remove("sh-input-active");
+    }
+
+    // Activate current item
+    const item = navItems[currentIndex];
+    if (item.type === "range") {
+      CSS.highlights.set("selection-current", new Highlight(item.target));
+      scrollToRange(item.target);
+    } else if (item.type === "mark") {
+      item.target.classList.add("sh-highlight-current");
+      item.target.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else if (item.type === "input") {
+      item.target.classList.add("sh-input-active");
+      item.target.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
     updateBadge(total, currentIndex);
@@ -523,7 +543,7 @@
     }
     // Highlight marker closest to active match
     if (currentIndex >= 0) {
-      const total = supportsHighlightAPI ? currentRanges.length : fallbackMarks.length;
+      const total = navItems.length;
       // Approximate marker index (markers are deduplicated)
       const ratio = currentIndex / total;
       const markerIdx = Math.min(
@@ -560,6 +580,8 @@
     }
     currentRanges = [];
     currentIndex = -1;
+    matchingInputEls = [];
+    navItems = [];
     clearInputHighlights();
     removeInputBanner();
     removeScrollbarMarkers();

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Selection Highlighter",
-  "version": "2.1",
+  "version": "2.2",
   "description": "Highlights all occurrences of selected text on the page instantly",
   "permissions": ["storage"],
   "background": {
