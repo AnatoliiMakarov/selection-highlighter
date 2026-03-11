@@ -5,6 +5,8 @@ const DEFAULTS = {
   caseSensitive: false,
   wholeWord: false,
   enabled: true,
+  highlightInputs: false,
+  showInputBanner: true,
 };
 
 const els = {
@@ -13,6 +15,8 @@ const els = {
   borderColor: document.getElementById("borderColor"),
   caseSensitive: document.getElementById("caseSensitive"),
   wholeWord: document.getElementById("wholeWord"),
+  highlightInputs: document.getElementById("highlightInputs"),
+  showInputBanner: document.getElementById("showInputBanner"),
   enabled: document.getElementById("enabled"),
   saved: document.getElementById("saved"),
   colorHex: document.getElementById("colorHex"),
@@ -27,6 +31,8 @@ chrome.storage.sync.get(DEFAULTS, (s) => {
   els.borderColor.value = s.borderColor;
   els.caseSensitive.checked = s.caseSensitive;
   els.wholeWord.checked = s.wholeWord;
+  els.highlightInputs.checked = s.highlightInputs;
+  els.showInputBanner.checked = s.showInputBanner;
   els.enabled.checked = s.enabled;
   els.colorHex.textContent = s.color;
   els.borderHex.textContent = s.borderColor;
@@ -41,6 +47,8 @@ function save() {
     borderColor: els.borderColor.value,
     caseSensitive: els.caseSensitive.checked,
     wholeWord: els.wholeWord.checked,
+    highlightInputs: els.highlightInputs.checked,
+    showInputBanner: els.showInputBanner.checked,
     enabled: els.enabled.checked,
   };
   chrome.storage.sync.set(settings, () => {
@@ -62,6 +70,8 @@ els.color.addEventListener("input", save);
 els.borderColor.addEventListener("input", save);
 els.caseSensitive.addEventListener("change", save);
 els.wholeWord.addEventListener("change", save);
+els.highlightInputs.addEventListener("change", save);
+els.showInputBanner.addEventListener("change", save);
 els.enabled.addEventListener("change", save);
 
 // ── Power button ──
@@ -112,6 +122,8 @@ document.getElementById("resetBtn").addEventListener("click", () => {
     els.borderHex.textContent = DEFAULTS.borderColor;
     els.caseSensitive.checked = DEFAULTS.caseSensitive;
     els.wholeWord.checked = DEFAULTS.wholeWord;
+    els.highlightInputs.checked = DEFAULTS.highlightInputs;
+    els.showInputBanner.checked = DEFAULTS.showInputBanner;
     els.enabled.checked = DEFAULTS.enabled;
     syncPower();
     flash("Reset");

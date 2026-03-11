@@ -10,6 +10,9 @@
   let scrollbarTrack = null;
   let currentRanges = [];   // all found ranges
   let currentIndex = -1;    // active match index
+  let inputMatchCount = 0;
+  let inputBanner = null;
+  let highlightedInputs = [];
   let settings = {
     minLength: 2,
     color: "#ffeb3b",
@@ -17,7 +20,11 @@
     caseSensitive: false,
     wholeWord: false,
     enabled: true,
+    highlightInputs: false,
+    showInputBanner: true,
   };
+
+  const TEXT_INPUT_TYPES = new Set(["text", "search", "url", "email", "tel", ""]);
 
   // ── Load settings ──
   chrome.storage.sync.get(settings, (s) => {
@@ -51,6 +58,42 @@
     return isWordBoundary(before) && isWordBoundary(after);
   }
 
+  // ── Count matches inside input/textarea fields ──
+  function countInputMatches(query) {
+    const elements = [];
+    let count = 0;
+    const searchQuery = settings.caseSensitive ? query : query.toLowerCase();
+    const fields = document.querySelectorAll("input, textarea");
+
+    for (const el of fields) {
+      if (el.tagName === "INPUT" &&
+          !TEXT_INPUT_TYPES.has((el.getAttribute("type") || "").toLowerCase())) {
+        continue;
+      }
+      if ((el.offsetParent === null && getComputedStyle(el).position !== "fixed") ||
+          getComputedStyle(el).visibility === "hidden") {
+        continue;
+      }
+      const val = el.value;
+      if (!val) continue;
+      const hay = settings.caseSensitive ? val : val.toLowerCase();
+      let pos = 0;
+      let fieldCount = 0;
+      while ((pos = hay.indexOf(searchQuery, pos)) !== -1) {
+        if (!settings.wholeWord || isWholeWordMatch(hay, pos, searchQuery.length)) {
+          fieldCount++;
+        }
+        pos += 1;
+      }
+      if (fieldCount > 0) {
+        count += fieldCount;
+        elements.push(el);
+      }
+    }
+
+    return { count, elements };
+  }
+
   // ── Main function ──
   function highlightMatches(searchText) {
     clearHighlights();
@@ -75,10 +118,94 @@
       matchCount = highlightWithFallback(query);
     }
 
+    // Input field matches
+    const inputResult = countInputMatches(query);
+    inputMatchCount = inputResult.count;
+    if (settings.highlightInputs && inputResult.elements.length > 0) {
+      for (const el of inputResult.elements) {
+        el.classList.add("sh-input-match");
+        highlightedInputs.push(el);
+      }
+    }
+    if (inputMatchCount > 0 && settings.showInputBanner) {
+      showInputBanner(inputMatchCount);
+    } else {
+      removeInputBanner();
+    }
+
     currentIndex = -1;
-    updateBadge(matchCount);
+    updateBadge(matchCount + inputMatchCount);
     if (matchCount > 0) {
       showScrollbarMarkers(query);
+    }
+  }
+
+  // ── Clear input highlights ──
+  function clearInputHighlights() {
+    for (const el of highlightedInputs) {
+      el.classList.remove("sh-input-match");
+    }
+    highlightedInputs = [];
+    inputMatchCount = 0;
+  }
+
+  // ── Input banner ──
+  function buildBannerText(count) {
+    const frag = document.createDocumentFragment();
+    const name = document.createElement("strong");
+    name.style.color = "var(--sh-color, #ffeb3b)";
+    name.textContent = "Selection Highlighter";
+    frag.appendChild(name);
+
+    const word = count === 1 ? "match" : "matches";
+    if (settings.highlightInputs) {
+      frag.appendChild(document.createTextNode(` \u2014 ${count} ${word} highlighted in input fields`));
+    } else {
+      frag.appendChild(document.createTextNode(` \u2014 ${count} ${word} found in input fields (not highlightable)`));
+      const br = document.createElement("br");
+      frag.appendChild(br);
+      const hint = document.createElement("span");
+      hint.style.cssText = "font-size:11px;opacity:0.7";
+      hint.textContent = "Enable input highlighting in extension settings";
+      frag.appendChild(hint);
+    }
+    return frag;
+  }
+
+  function showInputBanner(count) {
+    if (!inputBanner) {
+      inputBanner = document.createElement("div");
+      inputBanner.className = "sh-input-banner";
+
+      const icon = document.createElement("img");
+      icon.src = chrome.runtime.getURL("icon16.png");
+      icon.width = 14;
+      icon.height = 14;
+      icon.style.cssText = "flex-shrink:0;";
+      inputBanner.appendChild(icon);
+
+      const textSpan = document.createElement("span");
+      textSpan.className = "sh-input-banner-text";
+      inputBanner.appendChild(textSpan);
+
+      const dismiss = document.createElement("button");
+      dismiss.className = "sh-input-banner-dismiss";
+      dismiss.textContent = "\u00d7";
+      dismiss.addEventListener("click", () => removeInputBanner());
+      inputBanner.appendChild(dismiss);
+
+      document.body.appendChild(inputBanner);
+    }
+
+    const textEl = inputBanner.querySelector(".sh-input-banner-text");
+    textEl.textContent = "";
+    textEl.appendChild(buildBannerText(count));
+  }
+
+  function removeInputBanner() {
+    if (inputBanner) {
+      inputBanner.remove();
+      inputBanner = null;
     }
   }
 
@@ -433,6 +560,8 @@
     }
     currentRanges = [];
     currentIndex = -1;
+    clearInputHighlights();
+    removeInputBanner();
     removeScrollbarMarkers();
     updateBadge(0);
   }
@@ -442,7 +571,18 @@
   document.addEventListener("selectionchange", () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
-      const text = window.getSelection()?.toString() || "";
+      let text = window.getSelection()?.toString() || "";
+      if (!text) {
+        const active = document.activeElement;
+        if (active && (active.tagName === "TEXTAREA" ||
+            (active.tagName === "INPUT" && TEXT_INPUT_TYPES.has((active.getAttribute("type") || "").toLowerCase())))) {
+          const start = active.selectionStart;
+          const end = active.selectionEnd;
+          if (start !== null && end !== null && start !== end) {
+            text = active.value.slice(start, end);
+          }
+        }
+      }
       highlightMatches(text);
     }, DEBOUNCE_MS);
   });
